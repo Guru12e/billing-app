@@ -10,12 +10,15 @@ import AddProductModal from "@/components/AddProductModal";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
+  const [displayProduct, setDisplayProduct] = useState([]);
   const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
 
   async function fetchProducts() {
     const res = await fetch("/api/products");
     const data = await res.json();
     setProducts(data);
+    setDisplayProduct(data);
   }
 
   useEffect(() => {
@@ -26,10 +29,23 @@ export default function ProductsPage() {
     <div className="flex flex-col min-h-screen">
       <Header />
 
-      <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-        <Input placeholder="Search product..." className="rounded-xl" />
+      <div className="flex-1 p-4 space-y-4 mb-16 overflow-y-auto">
+        <Input
+          placeholder="Search product..."
+          value={input}
+          className="rounded-xl"
+          onChange={(e) => {
+            const value = e.target.value;
+            setInput(value);
+            const updated = products.filter((p) =>
+              p.name.toLowerCase().includes(value.toLowerCase()),
+            );
 
-        {products.map((product) => (
+            setDisplayProduct(updated);
+          }}
+        />
+
+        {displayProduct.map((product) => (
           <Card
             key={product._id}
             className="p-3 flex justify-between items-center rounded-xl"

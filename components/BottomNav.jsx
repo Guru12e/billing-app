@@ -5,7 +5,7 @@ import { Home, Receipt, Package, BarChart3 } from "lucide-react";
 
 export default function BottomNav() {
   return (
-    <div className="grid grid-cols-4 border-t bg-white p-2">
+    <div className="grid grid-cols-4 fixed bottom-0 w-full max-w-md border-t bg-white p-2">
       <Link href="/" className="flex flex-col items-center text-xs">
         <Home size={20} />
         Home
