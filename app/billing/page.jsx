@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Html5QrcodeScanner } from "html5-qrcode";
+import { parseVoiceWithGemini } from "@/lib/gemini";
 
 export default function BillingPage() {
   const [items, setItems] = useState([]);
@@ -19,12 +20,9 @@ export default function BillingPage() {
   const [products, setProducts] = useState([]);
   const [billHistory, setBillHistory] = useState([]);
   const [showDisplayIndex, setShowDisplayIndex] = useState(3);
-  const [voiceLang, setVoiceLang] = useState("en-IN"); // English or Tamil
+  const [voiceLang, setVoiceLang] = useState("en-IN");
   const [isScanning, setIsScanning] = useState(false);
 
-  // IMPORTANT: Get your FREE Gemini API key from https://aistudio.google.com/app/apikey
-  // Add this to your .env.local file:
-  // NEXT_PUBLIC_GEMINI_API_KEY=your_actual_key_here
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 
   const scannerRef = useRef(null);
@@ -46,7 +44,6 @@ export default function BillingPage() {
     setBillHistory(data);
   }
 
-  /* ---------------- ADD PRODUCT ---------------- */
   const addProduct = (name, productPrice) => {
     if (!name || !productPrice) return;
 
@@ -75,7 +72,6 @@ export default function BillingPage() {
     setPrice("");
   };
 
-  /* ---------------- PRODUCT AUTOFILL ---------------- */
   const handleProductSelect = (name) => {
     const product = products.find(
       (p) => p.name.toLowerCase() === name.toLowerCase(),
@@ -85,7 +81,6 @@ export default function BillingPage() {
     }
   };
 
-  /* ---------------- QTY CONTROLS ---------------- */
   const increaseQty = (index) => {
     setItems((prev) => {
       const updated = [...prev];
@@ -108,10 +103,8 @@ export default function BillingPage() {
     setItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  /* ---------------- BARCODE SCANNER (PROPERLY MANAGED) ---------------- */
   useEffect(() => {
     if (isScanning) {
-      // Clear any previous scanner
       if (scannerRef.current) {
         scannerRef.current.clear();
       }
@@ -127,7 +120,6 @@ export default function BillingPage() {
         if (product) {
           addProduct(product.name, product.price);
         }
-        // Continuous scanning (better UX) - stays open until user stops
       });
 
       scannerRef.current = newScanner;
@@ -146,66 +138,6 @@ export default function BillingPage() {
     };
   }, [isScanning, products]);
 
-  /* ---------------- AI VOICE BILLING WITH GOOGLE GEMINI (Free 1.5 Flash) ---------------- */
-  async function parseVoiceWithGemini(transcript, availableProducts) {
-    if (!GEMINI_API_KEY) {
-      alert(
-        "Gemini API Key not configured!\n\nAdd NEXT_PUBLIC_GEMINI_API_KEY=your_key to .env.local\nGet free key: https://aistudio.google.com/app/apikey",
-      );
-      return [];
-    }
-
-    const model = "gemini-1.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-
-    const productListStr = availableProducts
-      .map((p) => `${p.name} (₹${p.price})`)
-      .join("; ");
-
-    const prompt = `You are a smart bilingual billing assistant for an Indian store.
-
-Available products: ${productListStr}
-
-User spoke this (can be English or Tamil): "${transcript}"
-
-Return ONLY a valid JSON array in this exact format:
-[{"name": "exact product name from the list above (match even if slightly misspelled or spoken in Tamil)", "qty": number}, ...]
-
-Rules:
-- Translate Tamil to English product name automatically.
-- If no quantity mentioned, use 1.
-- If unclear or no match, return empty array [].
-- NEVER add any explanation or text outside the JSON.`;
-
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 300 },
-        }),
-      });
-
-      if (!response.ok) throw new Error("Gemini API error");
-
-      const data = await response.json();
-      let text = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
-
-      // Clean any markdown
-      text = text.replace(/```json|```/gi, "").trim();
-
-      const parsed = JSON.parse(text);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-      console.error("Gemini error:", error);
-      alert(
-        "AI voice parsing failed. Please try speaking clearly or use manual entry.",
-      );
-      return [];
-    }
-  }
-
   function startVoice() {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -216,7 +148,7 @@ Rules:
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = voiceLang; // en-IN or ta-IN
+    recognition.lang = voiceLang;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
@@ -311,7 +243,6 @@ Rules:
       <Header />
 
       <div className="p-4 space-y-4 flex-1">
-        {/* PRODUCT INPUT + AI VOICE + SCANNER */}
         <div className="flex gap-2 items-center">
           <Input
             list="products"
@@ -330,7 +261,6 @@ Rules:
             ))}
           </datalist>
 
-          {/* Language selector for AI Voice (English / Tamil) */}
           <select
             value={voiceLang}
             onChange={(e) => setVoiceLang(e.target.value)}
@@ -340,7 +270,6 @@ Rules:
             <option value="ta-IN">🇮🇳 TA</option>
           </select>
 
-          {/* AI Voice Billing Button (Gemini-powered) */}
           <button
             onClick={startVoice}
             className="bg-indigo-500 hover:bg-indigo-600 text-white p-3 rounded-xl transition"
@@ -349,7 +278,6 @@ Rules:
             <Mic size={18} />
           </button>
 
-          {/* Scanner Toggle Button */}
           <button
             onClick={() => setIsScanning(!isScanning)}
             className={`p-3 rounded-xl transition ${
@@ -370,10 +298,8 @@ Rules:
           </Button>
         </div>
 
-        {/* Scanner Container */}
         <div id="reader" className="mt-2" />
 
-        {/* Current Items */}
         {items.map((item, index) => (
           <Card key={index} className="rounded-xl">
             <CardContent className="p-3 flex justify-between items-center">
@@ -410,7 +336,6 @@ Rules:
         ))}
       </div>
 
-      {/* BILL SUMMARY */}
       <Card className="rounded-2xl border-2 border-indigo-100 mt-5">
         <CardContent className="p-4 space-y-3">
           <div className="flex justify-between text-sm">
@@ -435,7 +360,6 @@ Rules:
         </CardContent>
       </Card>
 
-      {/* BILL HISTORY */}
       <Card className="rounded-2xl my-5">
         <CardContent className="p-4 space-y-3">
           <h3 className="font-semibold">Bill History</h3>
