@@ -173,11 +173,6 @@ export default function BillingPage() {
       }
     };
 
-    recognition.onerror = (event) => {
-      console.error("Speech error:", event);
-      alert("Voice recognition error. Please try again.");
-    };
-
     recognition.start();
   }
 
