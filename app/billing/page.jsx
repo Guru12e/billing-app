@@ -20,6 +20,7 @@ export default function BillingPage() {
   const [products, setProducts] = useState([]);
   const [billHistory, setBillHistory] = useState([]);
   const [showDisplayIndex, setShowDisplayIndex] = useState(3);
+  const [voiceLang, setVoiceLang] = useState("en-IN");
   const [isScanning, setIsScanning] = useState(false);
 
   const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
@@ -147,12 +148,13 @@ export default function BillingPage() {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.interimResults = false;
     recognition.lang = "en-IN";
+    recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
     recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript.trim();
+      console.log(`Voice input (${voiceLang}):`, transcript);
 
       const parsedItems = await parseVoiceWithGemini(transcript, products);
 
@@ -169,6 +171,11 @@ export default function BillingPage() {
           console.warn(`Product "${item.name}" not found in database`);
         }
       }
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech error:", event);
+      alert("Voice recognition error. Please try again.");
     };
 
     recognition.start();
@@ -253,6 +260,15 @@ export default function BillingPage() {
               <option key={p._id} value={p.name} />
             ))}
           </datalist>
+
+          <select
+            value={voiceLang}
+            onChange={(e) => setVoiceLang(e.target.value)}
+            className="bg-white border border-gray-300 text-sm rounded-xl px-3 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="en-IN">🇬🇧 EN</option>
+            <option value="ta-IN">🇮🇳 TA</option>
+          </select>
 
           <button
             onClick={startVoice}
