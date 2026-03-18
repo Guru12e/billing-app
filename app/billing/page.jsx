@@ -148,6 +148,7 @@ export default function BillingPage() {
 
     const recognition = new SpeechRecognition();
     recognition.interimResults = false;
+    recognition.lang = "en-IN";
     recognition.maxAlternatives = 1;
 
     recognition.onresult = async (event) => {
