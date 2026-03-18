@@ -153,7 +153,6 @@ export default function BillingPage() {
 
     recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript.trim();
-      console.log(`Voice input (${voiceLang}):`, transcript);
 
       const parsedItems = await parseVoiceWithGemini(transcript, products);
 
