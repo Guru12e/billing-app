@@ -148,7 +148,7 @@ export default function BillingPage() {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = "en-IN";
+    recognition.lang = voiceLang;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
